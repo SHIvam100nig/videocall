@@ -95,6 +95,16 @@ async function startMeeting(asHost, id) {
             myPeerId = id;
             displayMeetingId.innerText = id;
             initPeer(id);
+
+            // Show WhatsApp Share Button for Host
+            const waBtn = document.getElementById('whatsapp-share-btn');
+            waBtn.classList.remove('hidden');
+            waBtn.onclick = () => {
+                const url = `${location.protocol}//${location.host}${location.pathname.replace('index.html', '')}?room=${id}`;
+                const msg = `Join my secure video meeting: ${url}`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+            };
+
         } else {
             hostId = id;
             displayMeetingId.innerText = id;
@@ -156,10 +166,14 @@ function initPeer(customId) {
     peer.on('call', (call) => {
         call.answer(myStream);
 
+        // Ensure peer entry exists
+        if (!peers[call.peer]) peers[call.peer] = {};
+        peers[call.peer].call = call;
+
         call.on('stream', (userVideoStream) => {
-            if (!peers[call.peer]) {
+            // Check ID to prevent duplicates
+            if (!document.getElementById('video-' + call.peer)) {
                 addVideoStream(userVideoStream, 'Peer', false, call.peer);
-                peers[call.peer] = { call: call };
             }
         });
 
@@ -178,7 +192,6 @@ function initPeer(customId) {
             setTimeout(() => location.reload(), 2000);
         } else if (err.type === 'peer-unavailable') {
             showToast('Waiting for Host...', 'warning');
-            // Optional retry logic could go here
         }
     });
 
@@ -190,52 +203,104 @@ function initPeer(customId) {
 
 function connectToHost(destId) {
     const conn = peer.connect(destId);
+
+    // Save connection immediately
+    if (!peers[destId]) peers[destId] = {};
+    peers[destId].conn = conn;
+
+    setupConnectionListeners(conn);
+
     conn.on('open', () => {
         conn.send({ type: 'join-request', peerId: myPeerId });
     });
-    conn.on('data', (data) => handleData(data));
 
     callPeer(destId);
 }
 
 function callPeer(destId) {
-    if (peers[destId]) return;
+    // 1. Media Call
+    if (!peers[destId] || !peers[destId].call) {
+        // Create placeholder if needed
+        if (!peers[destId]) peers[destId] = {};
 
-    // Add slight delay to avoid race conditions in mesh
-    setTimeout(() => {
-        const call = peer.call(destId, myStream);
+        // Add slight delay to avoid race conditions
+        setTimeout(() => {
+            const call = peer.call(destId, myStream);
+            peers[destId].call = call; // Save call ref
 
-        call.on('stream', (userVideoStream) => {
-            if (!peers[destId]) {
-                addVideoStream(userVideoStream, 'Peer', false, destId);
-                peers[destId] = { call: call };
-            }
-        });
+            call.on('stream', (userVideoStream) => {
+                // Only add if not already added (check ID-based selector)
+                if (!document.getElementById('video-' + destId)) {
+                    addVideoStream(userVideoStream, 'Peer', false, destId);
+                }
+            });
 
-        call.on('close', () => removeVideoStream(destId));
-    }, 500);
+            call.on('close', () => removeVideoStream(destId));
+            call.on('error', () => removeVideoStream(destId));
+        }, 500);
+    }
+
+    // 2. Data Connection (Mesh Chat)
+    // If we don't have a data connection to this peer yet, open one
+    if (!peers[destId].conn) {
+        const conn = peer.connect(destId);
+        peers[destId].conn = conn;
+        setupConnectionListeners(conn);
+    }
 }
 
-// --- Mesh Logic ---
+// --- Data & Mesh Logic ---
 
 function handleDataConnection(conn) {
+    // Incoming connection
+    // We need to wait for 'open' or data to know who it is, 
+    // BUT PeerJS 'connection' event usually provides conn.peer immediately in metadata
+
+    setupConnectionListeners(conn);
+}
+
+function setupConnectionListeners(conn) {
+    conn.on('open', () => {
+        // Connection established
+        if (conn.peer) {
+            if (!peers[conn.peer]) peers[conn.peer] = {};
+            peers[conn.peer].conn = conn;
+        }
+    });
+
     conn.on('data', (data) => {
+        // Ensure we map this connection to the peer if not already
+        if (conn.peer) {
+            if (!peers[conn.peer]) peers[conn.peer] = {};
+            peers[conn.peer].conn = conn;
+        }
+
         if (isHost && data.type === 'join-request') {
             const newJoinerId = data.peerId;
+            // Map the connection specifically to the declared ID
+            if (!peers[newJoinerId]) peers[newJoinerId] = {};
+            peers[newJoinerId].conn = conn;
+
             const existingPeers = Object.keys(peers);
             conn.send({ type: 'peer-list', peers: existingPeers });
 
+            // Notify others
             Object.values(peers).forEach(p => {
-                if (p.conn) p.conn.send({ type: 'user-joined', peerId: newJoinerId });
+                if (p.conn && p.conn.open && p.conn.peer !== newJoinerId) {
+                    p.conn.send({ type: 'user-joined', peerId: newJoinerId });
+                }
             });
-
-            if (!peers[newJoinerId]) peers[newJoinerId] = {};
-            peers[newJoinerId].conn = conn;
         }
         else {
             handleData(data);
         }
     });
+
+    conn.on('close', () => {
+        // Handle close
+    });
+
+    conn.on('error', (err) => console.error("Conn error:", err));
 }
 
 function handleData(data) {
@@ -246,6 +311,7 @@ function handleData(data) {
     }
     else if (data.type === 'user-joined') {
         callPeer(data.peerId);
+        showToast('New user joined!');
     }
 }
 
@@ -305,6 +371,31 @@ function toggleVideo() {
         const icon = btnVideo.querySelector('i');
         icon.classList.toggle('ph-video');
         icon.classList.toggle('ph-video-camera-slash');
+    }
+}
+
+const btnPip = document.getElementById('btn-pip');
+btnPip.addEventListener('click', togglePip);
+
+async function togglePip() {
+    try {
+        if (document.pictureInPictureElement) {
+            await document.exitPictureInPicture();
+        } else {
+            // Priority: First Remote Peer -> Screen Share -> My Video
+            const videos = Array.from(document.querySelectorAll('video'));
+            const remoteVideo = videos.find(v => !v.closest('.is-local'));
+            const targetVideo = remoteVideo || videos[0]; // Fallback to self
+
+            if (targetVideo && targetVideo.readyState >= 1) {
+                await targetVideo.requestPictureInPicture();
+            } else {
+                showToast('No active video for PiP', 'warning');
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('PiP failed: ' + err.message, 'error');
     }
 }
 
@@ -386,3 +477,126 @@ displayMeetingId.addEventListener('click', () => {
         showToast('ID Copied: ' + id);
     });
 });
+
+// --- Chat Logic (No Files) ---
+
+// Chat UI Elements
+const btnChat = document.getElementById('btn-chat');
+const chatPanel = document.getElementById('chat-panel');
+const closeChatBtn = document.getElementById('close-chat-btn');
+const chatInput = document.getElementById('chat-input');
+const btnSend = document.getElementById('btn-send');
+const chatMessages = document.getElementById('chat-messages');
+const unreadBadge = document.getElementById('unread-badge');
+
+let unreadCount = 0;
+let isChatOpen = false;
+
+// UI Toggles
+btnChat.addEventListener('click', toggleChat);
+closeChatBtn.addEventListener('click', toggleChat);
+
+function toggleChat() {
+    isChatOpen = !isChatOpen;
+    if (isChatOpen) {
+        chatPanel.classList.remove('hidden');
+        chatPanel.classList.add('open'); // For mobile animation
+        unreadCount = 0;
+        updateBadge();
+        chatInput.focus();
+    } else {
+        chatPanel.classList.add('hidden');
+        chatPanel.classList.remove('open');
+    }
+}
+
+function updateBadge() {
+    unreadBadge.innerText = unreadCount;
+    if (unreadCount > 0) unreadBadge.classList.remove('hidden');
+    else unreadBadge.classList.add('hidden');
+}
+
+// Sending Messages
+btnSend.addEventListener('click', sendChatMessage);
+chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendChatMessage();
+});
+
+function sendChatMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    const msgData = {
+        type: 'chat',
+        sender: 'Me', // Ideally user's name if we had auth
+        text: text,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    appendMessage(msgData, 'my-message');
+    broadcastData(msgData);
+    chatInput.value = '';
+}
+
+function appendMessage(data, type) {
+    const div = document.createElement('div');
+    div.className = `message ${type}`;
+
+    // Create copy button functionality
+    const uniqueId = 'msg-' + Date.now() + Math.random();
+
+    div.innerHTML = `
+        <span class="sender-name">${data.sender} ${data.time || ''}</span>
+        <div class="message-content">
+            <span id="${uniqueId}">${data.text}</span>
+            <button class="copy-btn" onclick="window.copyText('${uniqueId}')" title="Copy">
+                <i class="ph ph-copy"></i>
+            </button>
+        </div>
+    `;
+
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    if (!isChatOpen && type === 'peer-message') {
+        unreadCount++;
+        updateBadge();
+        showToast(`New message from ${data.sender}`);
+    }
+}
+
+// Global copy function
+window.copyText = function (elementId) {
+    const text = document.getElementById(elementId).innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard!');
+    }).catch(err => {
+        showToast('Failed to copy', 'error');
+    });
+};
+
+// Data Handling Extension
+// Reuse existing handleData, just adding cases
+const originalHandleData = handleData;
+
+handleData = function (data) {
+    if (data.type === 'chat') {
+        appendMessage({
+            sender: 'Peer', // Or data.sender if sent
+            text: data.text,
+            time: data.time
+        }, 'peer-message');
+    }
+    else {
+        // Delegate back to original handler for mesh logic
+        if (originalHandleData) originalHandleData(data);
+    }
+};
+
+function broadcastData(data) {
+    Object.values(peers).forEach(p => {
+        if (p.conn && p.conn.open) {
+            p.conn.send(data);
+        }
+    });
+}
