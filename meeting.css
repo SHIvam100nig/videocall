@@ -209,6 +209,22 @@ button {
     color: var(--neon-primary);
 }
 
+.icon-btn {
+    background: transparent;
+    border: none;
+    color: #25D366;
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s;
+}
+
+.icon-btn:hover {
+    transform: scale(1.2);
+}
+
 .video-grid {
     flex: 1;
     display: grid;
@@ -471,4 +487,202 @@ button {
 
 .whatsapp-btn:hover {
     transform: scale(1.02);
+}
+
+/* --- WhatsApp Style Mobile Layout (Max-width 768px for now) --- */
+@media (max-width: 768px) {
+
+    /* Remove padding from container to allow full bleed */
+    #meeting-container {
+        height: 100vh;
+        height: 100dvh;
+    }
+
+    .video-grid {
+        display: block;
+        /* Disable grid */
+        padding: 0;
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Generic Video Tile Reset */
+    .video-tile {
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+        background: black;
+    }
+
+    /* REMOTE VIDEO: Full Screen */
+    /* Select any video tile that is NOT local */
+    .video-tile:not(.is-local) {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        /* Background layer */
+    }
+
+    .video-tile:not(.is-local) video {
+        object-fit: cover;
+    }
+
+    /* LOCAL VIDEO: Picture-in-Picture (Floating) */
+    .video-tile.is-local {
+        position: fixed;
+        bottom: 110px;
+        /* Above control bar */
+        right: 15px;
+        width: 110px;
+        height: 150px;
+        /* Portrait aspect for user video usually */
+        z-index: 10;
+        /* Float on top */
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        aspect-ratio: auto;
+        /* Override 16/9 */
+    }
+
+    .video-tile.is-local video {
+        object-fit: cover;
+        border-radius: 12px;
+    }
+
+    /* Hide name tags on mobile for cleaner look, or style them smaller */
+    .video-tile .name-tag {
+        display: none;
+    }
+
+    /* Keep audio indicator small */
+    .video-tile .audio-indicator {
+        top: 5px;
+        right: 5px;
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+    }
+
+    /* Top Bar Floating transparently on top */
+    .top-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+        border-bottom: none;
+        backdrop-filter: none;
+        pointer-events: none;
+        /* Let clicks pass through to video */
+        z-index: 20;
+    }
+
+    .top-bar * {
+        pointer-events: auto;
+        /* Re-enable for buttons */
+    }
+
+    /* Control Bar Floating at bottom */
+    .control-bar {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 350px;
+        background: rgba(30, 30, 40, 0.85);
+        border-radius: 50px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        justify-content: space-evenly;
+        padding: 10px 20px;
+        z-index: 20;
+        min-height: auto;
+    }
+
+    .control-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 1.1rem;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .control-btn.danger {
+        width: 45px;
+        /* Circle for end call too on mobile */
+        border-radius: 50%;
+        background: #FF4444;
+    }
+
+    /* REFINEMENT: If user is alone, show self as full screen */
+    .video-grid .video-tile.is-local:only-of-type {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        bottom: auto;
+        right: auto;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+    }
+
+    /* Hide Screen Share on Mobile (Not typical in WhatsApp) */
+    #btn-screen {
+        display: none;
+    }
+
+    .logo {
+        display: none;
+        /* Hide logo on mobile to mimic call header */
+    }
+
+    .meeting-info {
+        flex: 1;
+        justify-content: center;
+        /* Center the room ID like a contact name */
+        font-size: 1.1rem;
+        font-weight: bold;
+        background: none;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    .code-text {
+        background: transparent;
+        border: none;
+    }
+
+    .timer {
+        position: absolute;
+        top: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+
+    .top-bar {
+        height: 80px;
+        /* Taller to accommodate stacked text */
+        align-items: flex-start;
+        padding-top: 15px;
+    }
+
+    /* Adjust controls to be more compact */
+    .control-bar {
+        background: rgba(20, 20, 20, 0.6);
+        /* More transparent like WhatsApp */
+        border: none;
+        backdrop-filter: blur(4px);
+        bottom: 30px;
+        max-width: 280px;
+        border-radius: 40px;
+    }
 }
