@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,7 @@
     <!-- Phosphor Icons for modern UI icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
+
 <body>
 
     <!-- Toast Notification Container -->
@@ -19,14 +21,14 @@
     <div id="landing-overlay" class="glass-panel">
         <h1 class="neon-text">STEGURE MEETING</h1>
         <p class="subtitle">Secure, Serverless, Peer-to-Peer.</p>
-        
+
         <div class="input-group">
             <input type="text" id="meeting-id-input" placeholder="Enter Meeting ID" autocomplete="off">
             <button id="join-btn" class="neon-btn">JOIN MEETING</button>
         </div>
-        
+
         <div class="divider"><span>OR</span></div>
-        
+
         <button id="create-btn" class="neon-btn secondary">CREATE NEW MEETING</button>
         <!-- Invite Friend Button (Client-side) -->
         <button id="whatsapp-share-btn" class="whatsapp-btn hidden">
@@ -36,13 +38,16 @@
 
     <!-- Active Meeting Interface -->
     <div id="meeting-container" class="hidden">
-        
+
         <!-- Header / Info Bar -->
         <div class="top-bar glass-panel-sm">
             <div class="logo">STEGURE</div>
             <div class="meeting-info">
-                <span>Meeting ID: </span>
-                <span id="display-meeting-id" class="code-text" title="Click to Copy">Wait...</span>
+                <span>ID: </span>
+                <span id="display-meeting-id" class="code-text" title="Click to Copy">...</span>
+                <button id="whatsapp-share-btn" class="icon-btn hidden" title="Share via WhatsApp">
+                    <i class="ph ph-whatsapp-logo"></i>
+                </button>
             </div>
             <div class="timer" id="meeting-timer">00:00</div>
         </div>
@@ -83,4 +88,5 @@
 
     <script src="meeting.js"></script>
 </body>
+
 </html>
