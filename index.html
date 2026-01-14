@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stegure Meeting - Secure P2P Conference</title>
-    <link rel="stylesheet" href="meeting.css">
+    <link rel="stylesheet" href="meeting.css?v=chat-added">
     <!-- PeerJS CDN -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- Phosphor Icons for modern UI icons -->
@@ -68,6 +68,22 @@
             </template>
         </main>
 
+        <!-- Chat Panel (Hidden by default) -->
+        <div id="chat-panel" class="chat-panel hidden">
+            <div class="chat-header">
+                <h3>Chat</h3>
+                <button id="close-chat-btn"><i class="ph ph-x"></i></button>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+                <!-- Messages injected here -->
+                <div class="message system-msg">Welcome to the chat!</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+                <button id="btn-send"><i class="ph ph-paper-plane-right"></i></button>
+            </div>
+        </div>
+
         <!-- Bottom Control Bar -->
         <div class="control-bar glass-panel-sm">
             <button id="btn-mic" class="control-btn active" title="Toggle Microphone">
@@ -79,6 +95,13 @@
             <button id="btn-screen" class="control-btn" title="Share Screen">
                 <i class="ph ph-screencast"></i>
             </button>
+            <button id="btn-chat" class="control-btn" title="Open Chat">
+                <i class="ph ph-chat-teardrop-text"></i>
+                <span id="unread-badge" class="badge hidden">0</span>
+            </button>
+            <button id="btn-pip" class="control-btn" title="Picture in Picture">
+                <i class="ph ph-picture-in-picture"></i>
+            </button>
             <button id="btn-end" class="control-btn danger" title="End Call">
                 <i class="ph ph-phone-disconnect"></i>
             </button>
@@ -86,7 +109,7 @@
 
     </div>
 
-    <script src="meeting.js"></script>
+    <script src="meeting.js?v=pip-added"></script>
 </body>
 
 </html>
