@@ -390,3 +390,85 @@ button {
         transform: translateX(0);
     }
 }
+
+/* Permission Helper Modal */
+#permission-modal {
+    background: rgba(0, 0, 0, 0.95);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 30px;
+}
+
+.perm-instruction {
+    font-size: 1.2rem;
+    color: white;
+    margin-bottom: 20px;
+    max-width: 300px;
+    line-height: 1.6;
+}
+
+.arrow-up {
+    font-size: 3rem;
+    color: var(--neon-danger);
+    animation: bounce 1s infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.modal-btn {
+    margin-top: 20px;
+    background: white;
+    color: black;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.modal-btn:hover {
+    background: #eee;
+}
+
+/* WhatsApp Button */
+.whatsapp-btn {
+    background: #25D366;
+    color: white;
+    border: none;
+    margin-top: 15px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    width: 100%;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.whatsapp-btn:hover {
+    transform: scale(1.02);
+}
