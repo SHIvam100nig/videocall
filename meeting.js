@@ -97,7 +97,15 @@ async function startMeeting(asHost, id) {
 
     } catch (err) {
         console.error("Error accessing media:", err);
-        showToast('Error accessing Camera/Microphone. Allow permissions.', 'error');
+        if (err.name === 'NotAllowedError') {
+            showToast('Permission Denied. Please reset site permissions.', 'error');
+        } else if (err.name === 'NotFoundError') {
+            showToast('No Camera or Microphone found.', 'error');
+        } else if (err.name === 'NotReadableError') {
+            showToast('Camera is in use by another app. Close it and retry.', 'error');
+        } else {
+            showToast('Media Error: ' + err.message, 'error');
+        }
     }
 }
 
