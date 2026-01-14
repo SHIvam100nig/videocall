@@ -418,6 +418,108 @@ async function toggleScreenShare() {
     } catch (err) { console.error(err); }
 }
 
+const btnRecord = document.getElementById('btn-record');
+btnRecord.addEventListener('click', toggleRecording);
+
+let mediaRecorder;
+let recordedChunks = [];
+let isRecording = false;
+
+async function toggleRecording() {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        await startRecording();
+    }
+}
+
+async function startRecording() {
+    try {
+        // 1. Capture the "Screen" (Meeting View + System Audio)
+        // User MUST select the current Tab and "Share Audio"
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+            video: { mediaSource: "screen" },
+            audio: true
+        });
+
+        // 2. Get Mic Stream separately (myStream usually has it)
+        // We need to mix Mic + System Audio
+        const audioContext = new AudioContext();
+        const destination = audioContext.createMediaStreamDestination();
+
+        // Add System Audio (from screen share) if available
+        if (displayStream.getAudioTracks().length > 0) {
+            const systemSource = audioContext.createMediaStreamSource(displayStream);
+            systemSource.connect(destination);
+        }
+
+        // Add Mic Audio
+        if (myStream && myStream.getAudioTracks().length > 0) {
+            const micSource = audioContext.createMediaStreamSource(myStream);
+            micSource.connect(destination);
+        }
+
+        // 3. Create Final Combined Stream
+        const combinedStream = new MediaStream([
+            ...displayStream.getVideoTracks(),
+            ...destination.stream.getAudioTracks()
+        ]);
+
+        // 4. Start Recording
+        mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm; codecs=vp9' });
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = 'meeting-recording.webm';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+
+            // Cleanup
+            btnRecord.classList.remove('active');
+            displayStream.getTracks().forEach(track => track.stop()); // Stop screen capture
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        btnRecord.classList.add('active'); // Red indicator style needed
+        showToast('Recording Started! (Don\'t switch tabs)', 'warning');
+
+        // Notify Peers
+        broadcastData({ type: 'recording-started' });
+
+        // Handle if user stops sharing via browser UI
+        displayStream.getVideoTracks()[0].onended = () => {
+            if (isRecording) stopRecording();
+        };
+
+    } catch (err) {
+        console.error(err);
+        showToast('Scanning cancelled or failed.', 'error');
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        isRecording = false;
+        showToast('Recording Saved!', 'info');
+
+        // Notify Peers
+        broadcastData({ type: 'recording-stopped' });
+    }
+}
+
+
 function stopScreenShare() {
     if (!myScreenStream) return;
     myScreenStream.getTracks().forEach(t => t.stop());
@@ -586,6 +688,12 @@ handleData = function (data) {
             text: data.text,
             time: data.time
         }, 'peer-message');
+    }
+    else if (data.type === 'recording-started') {
+        showToast('📢 A specific user started recording.', 'warning');
+    }
+    else if (data.type === 'recording-stopped') {
+        showToast('⏹️ Recording stopped.', 'info');
     }
     else {
         // Delegate back to original handler for mesh logic
