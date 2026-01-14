@@ -490,6 +490,27 @@ button {
 }
 
 /* --- WhatsApp Style Mobile Layout (Max-width 768px for now) --- */
+/* Recording Active State */
+#btn-record.active {
+    background: #ff2a6d;
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
 @media (max-width: 768px) {
 
     /* Remove padding from container to allow full bleed */
@@ -636,7 +657,13 @@ button {
 
     /* Hide Screen Share on Mobile (Not typical in WhatsApp) */
     #btn-screen {
-        display: none;
+        display: flex;
+        /* Re-enable for mobile */
+    }
+
+    /* Hide Recording on Mobile */
+    #btn-record {
+        display: none !important;
     }
 
     .logo {
