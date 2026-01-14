@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stegure Meeting - Secure P2P Conference</title>
+    <title>Stegure Meeting - Secure Conference</title>
     <link rel="stylesheet" href="meeting.css?v=chat-added">
     <!-- PeerJS CDN -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -20,7 +20,7 @@
     <!-- Landing / Join Overlay -->
     <div id="landing-overlay" class="glass-panel">
         <h1 class="neon-text">STEGURE MEETING</h1>
-        <p class="subtitle">Secure, Serverless, Peer-to-Peer.</p>
+        <p class="subtitle">Secure, Serverless</p>
 
         <div class="input-group">
             <input type="text" id="meeting-id-input" placeholder="Enter Meeting ID" autocomplete="off">
@@ -99,6 +99,9 @@
                 <i class="ph ph-chat-teardrop-text"></i>
                 <span id="unread-badge" class="badge hidden">0</span>
             </button>
+            <button id="btn-record" class="control-btn" title="Record Meeting">
+                <i class="ph ph-record"></i>
+            </button>
             <button id="btn-pip" class="control-btn" title="Picture in Picture">
                 <i class="ph ph-picture-in-picture"></i>
             </button>
@@ -109,7 +112,7 @@
 
     </div>
 
-    <script src="meeting.js?v=pip-added"></script>
+    <script src="meeting.js?v=rec-notify"></script>
 </body>
 
 </html>
