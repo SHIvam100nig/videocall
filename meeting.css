@@ -1,0 +1,392 @@
+:root {
+    --bg-dark: #0a0a12;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --neon-primary: #00f3ff;
+    --neon-secondary: #bc13fe;
+    --neon-danger: #ff2a6d;
+    --text-main: #ffffff;
+    --text-muted: #a0a0a0;
+    --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-dark);
+    background-image:
+        radial-gradient(circle at 15% 50%, rgba(188, 19, 254, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(0, 243, 255, 0.1) 0%, transparent 25%);
+    font-family: var(--font-family);
+    color: var(--text-main);
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    outline: none;
+    font-family: inherit;
+}
+
+/* Utilities */
+.hidden {
+    display: none !important;
+}
+
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.glass-panel-sm {
+    background: rgba(20, 20, 30, 0.6);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--glass-border);
+}
+
+/* Landing Overlay */
+#landing-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 400px;
+    padding: 40px;
+    text-align: center;
+    z-index: 100;
+}
+
+.neon-text {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-main);
+    text-shadow: 0 0 10px var(--neon-primary), 0 0 20px var(--neon-primary);
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    margin-bottom: 30px;
+    font-size: 0.9rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+#meeting-id-input {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+#meeting-id-input:focus {
+    border-color: var(--neon-primary);
+    box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+    outline: none;
+}
+
+.neon-btn {
+    background: transparent;
+    border: 1px solid var(--neon-primary);
+    color: var(--neon-primary);
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 5px rgba(0, 243, 255, 0.2);
+}
+
+.neon-btn:hover {
+    background: var(--neon-primary);
+    color: black;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+}
+
+.neon-btn.secondary {
+    border-color: var(--neon-secondary);
+    color: var(--neon-secondary);
+    box-shadow: 0 0 5px rgba(188, 19, 254, 0.2);
+}
+
+.neon-btn.secondary:hover {
+    background: var(--neon-secondary);
+    color: white;
+    box-shadow: 0 0 15px rgba(188, 19, 254, 0.6);
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin: 20px 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--glass-border);
+}
+
+.divider span {
+    margin: 0 10px;
+}
+
+
+/* Main Meeting Container */
+#meeting-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    /* Fallback */
+    height: 100dvh;
+    /* Dynamic viewport height for mobile */
+    overflow: hidden;
+}
+
+.top-bar {
+    height: 60px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+.logo {
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--neon-primary);
+}
+
+.meeting-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.code-text {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    cursor: pointer;
+    border: 1px dashed var(--glass-border);
+}
+
+.code-text:hover {
+    border-color: var(--neon-primary);
+    color: var(--neon-primary);
+}
+
+.video-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+    padding: 20px;
+    overflow-y: auto;
+    align-content: center;
+}
+
+/* Video Tile */
+.video-tile {
+    background: black;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 16/9;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+/* Local user video can be mirrored */
+.video-tile.is-local video {
+    transform: scaleX(-1);
+}
+
+.video-tile video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.video-tile .name-tag {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    backdrop-filter: blur(4px);
+}
+
+.video-tile .audio-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+
+/* Speaking active state */
+.video-tile.speaking {
+    border-color: var(--neon-primary);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+}
+
+/* Control Bar */
+.control-bar {
+    height: auto;
+    min-height: 80px;
+    padding: 15px 20px;
+    padding-bottom: max(15px, env(safe-area-inset-bottom));
+    /* iOS Home bar safe area */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 10;
+    flex-shrink: 0;
+    background: rgba(20, 20, 30, 0.8);
+    /* Slightly darker/more opaque for contrast */
+}
+
+.control-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.control-btn.active {
+    background: var(--neon-primary);
+    /* Or a "normal" state color */
+    color: black;
+}
+
+/* When "active" class is REMOVED, it means muted/off, so let's flip logic or naming.
+   Common UI: 
+   - Button Normal (Dark/Red) = Off
+   - Button Active (Color) = On
+   Let's stick to: "active" means enabled/on. 
+   When muted (class removed), it looks "off".
+*/
+.control-btn {
+    background: #FF4444;
+    /* Default to red/off state base */
+    color: white;
+}
+
+.control-btn.active {
+    background: #333;
+    /* Dark/Normal state when feature is ON? Or vice versa? */
+    /* Wait, usually: 
+       Mic ON = Dark/Transparent/Neutral
+       Mic OFF = RED
+    */
+    background: rgba(255, 255, 255, 0.15);
+    /* Neutral ON state */
+    color: white;
+}
+
+.control-btn:not(.active) {
+    background: var(--neon-danger);
+    box-shadow: 0 0 10px rgba(255, 42, 109, 0.4);
+}
+
+.control-btn.danger {
+    background: var(--neon-danger);
+    width: 60px;
+    height: 40px;
+    border-radius: 8px;
+    /* Pill shape for hangup */
+}
+
+.control-btn.danger:hover {
+    background: #d00040;
+}
+
+/* Toast */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+}
+
+.toast {
+    background: rgba(0, 0, 0, 0.8);
+    border-left: 3px solid var(--neon-primary);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.3s ease;
+    font-size: 0.9rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
