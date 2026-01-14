@@ -682,7 +682,225 @@ button {
         border: none;
         backdrop-filter: blur(4px);
         bottom: 30px;
-        max-width: 280px;
+        max-width: 320px;
+        /* Slight increase for chat btn */
         border-radius: 40px;
     }
+
+    /* Mobile Chat Drawer */
+    #chat-panel {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        /* Full width bottom sheet */
+        width: 100%;
+        height: 80vh;
+        /* 80% height */
+        border-right: none;
+        border-top: 1px solid var(--glass-border);
+        border-radius: 20px 20px 0 0;
+        transform: translateY(100%);
+        /* Slide up animation state */
+    }
+
+    #chat-panel.open {
+        transform: translateY(0);
+    }
+}
+
+/* --- Chat UI Styles (Global/Desktop) --- */
+.chat-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    /* Full height sidebar on desktop */
+    width: 350px;
+    background: rgba(10, 10, 15, 0.95);
+    border-left: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    backdrop-filter: blur(16px);
+    transition: transform 0.3s ease;
+}
+
+.chat-panel.hidden {
+    /* Instead of display:none, we slide it out */
+    transform: translateX(100%);
+    display: flex !important;
+    /* Override hidden helper for animation */
+}
+
+/* On desktop, hidden really means moved right */
+@media (min-width: 769px) {
+    .chat-panel.hidden {
+        transform: translateX(100%);
+    }
+
+    .chat-panel:not(.hidden) {
+        transform: translateX(0);
+    }
+}
+
+.chat-header {
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.chat-header h3 {
+    color: var(--neon-primary);
+    margin: 0;
+}
+
+#close-chat-btn {
+    background: transparent;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.message {
+    padding: 8px 12px;
+    border-radius: 8px;
+    max-width: 85%;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.message.my-message {
+    align-self: flex-end;
+    background: var(--neon-primary);
+    color: black;
+    border-bottom-right-radius: 2px;
+}
+
+.message.peer-message {
+    align-self: flex-start;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-bottom-left-radius: 2px;
+}
+
+.message.system-msg {
+    align-self: center;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 4px 8px;
+}
+
+.sender-name {
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+    opacity: 0.7;
+    font-weight: bold;
+    display: block;
+}
+
+.file-attachment {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 6px;
+    border-radius: 4px;
+    text-decoration: none;
+    color: inherit;
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.image-preview img {
+    max-width: 100%;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    display: block;
+}
+
+/* Chat Message Copy Button */
+.message-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.copy-btn {
+    background: transparent;
+    border: none;
+    color: inherit;
+    opacity: 0.6;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px 5px;
+    border-radius: 4px;
+    transition: opacity 0.2s;
+}
+
+.copy-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.chat-input-area {
+    padding: 15px;
+    border-top: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#chat-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    padding: 10px;
+    border-radius: 20px;
+    color: white;
+}
+
+#chat-input:focus {
+    border-color: var(--neon-primary);
+    outline: none;
+}
+
+.chat-input-area button {
+    background: transparent;
+    color: var(--neon-primary);
+    font-size: 1.2rem;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.chat-input-area button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--neon-danger);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 5px;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
 }
