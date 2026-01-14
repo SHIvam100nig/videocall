@@ -7,9 +7,9 @@ let myPeerId = null;
 let peer = null;
 let myStream = null;
 let myScreenStream = null;
-const peers = {}; // Keep track of active calls: { peerId: { call, conn, videoEl } }
+const peers = {};
 let isHost = false;
-let hostId = null; // If I am joiner, who is host?
+let hostId = null;
 
 // DOM Elements
 const landingOverlay = document.getElementById('landing-overlay');
@@ -36,9 +36,7 @@ window.addEventListener('load', () => {
     const roomId = params.get('room');
     if (roomId) {
         meetingIdInput.value = roomId;
-        // Optional: Auto-click join?
-        // Let's just fill it and let user click JOIN to ensure interaction/permissions
-        showToast('Room ID loaded from link. Click JOIN.', 'info');
+        showToast('Click JOIN to start.', 'info');
     }
 });
 
@@ -51,7 +49,7 @@ joinBtn.addEventListener('click', () => {
 });
 
 createBtn.addEventListener('click', () => {
-    const newId = generateId(); // 'Steg-' + Math.random()...
+    const newId = generateId();
     startMeeting(true, newId);
 });
 
@@ -65,22 +63,32 @@ btnEnd.addEventListener('click', endCall);
 // --- Core Meeting Logic ---
 
 async function startMeeting(asHost, id) {
-    try {
-        // 1. Get Local Stream
-        myStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true
-        });
+    showToast('Requesting Camera Access...', 'info');
 
-        // 2. Add Myself to Grid
+    try {
+        // Data Saver Mode: 360p, 15fps for stability on mobile data
+        const constraints = {
+            video: {
+                width: { ideal: 480 },
+                height: { ideal: 360 },
+                frameRate: { ideal: 15, max: 20 },
+                facingMode: "user"
+            },
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true
+            }
+        };
+
+        myStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        // Success!
         addVideoStream(myStream, 'Me', true);
 
-        // 3. UI Transition
         landingOverlay.classList.add('hidden');
         meetingContainer.classList.remove('hidden');
         startTimer();
 
-        // 4. Initialize Peer
         isHost = asHost;
         if (asHost) {
             hostId = id;
@@ -88,8 +96,6 @@ async function startMeeting(asHost, id) {
             displayMeetingId.innerText = id;
             initPeer(id);
         } else {
-            // Joiner: Generate random temp ID (null lets PeerJS generate one)
-            // But we need to connect TO 'id'
             hostId = id;
             displayMeetingId.innerText = id;
             initPeer(null);
@@ -97,23 +103,41 @@ async function startMeeting(asHost, id) {
 
     } catch (err) {
         console.error("Error accessing media:", err);
-        if (err.name === 'NotAllowedError') {
-            showToast('Permission Denied. Please reset site permissions.', 'error');
+
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            showPermissionModal(); // SHOW VISUAL GUIDE
         } else if (err.name === 'NotFoundError') {
-            showToast('No Camera or Microphone found.', 'error');
+            showToast('No Camera/Mic found.', 'error');
         } else if (err.name === 'NotReadableError') {
-            showToast('Camera is in use by another app. Close it and retry.', 'error');
+            showToast('Camera in use by another app!', 'error');
         } else {
             showToast('Media Error: ' + err.message, 'error');
         }
     }
 }
 
+function showPermissionModal() {
+    // Check if modal already exists
+    if (document.getElementById('permission-modal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'permission-modal';
+    modal.innerHTML = `
+        <div class="arrow-up">☝️</div>
+        <div class="perm-instruction">
+            <strong>Camera Blocked!</strong><br><br>
+            1. Tap the 🔒 Lock Icon in URL bar.<br>
+            2. Click "Permissions" or "Reset".<br>
+            3. Refresh the page.
+        </div>
+        <button class="modal-btn" onclick="location.reload()">REFRESH PAGE</button>
+    `;
+    document.body.appendChild(modal);
+}
+
 function initPeer(customId) {
-    // Only pass ID if it's the host creating a specific room ID
     const options = customId ? { host: '0.peerjs.com', port: 443, path: '/', secure: true } : undefined;
 
-    // Note: If customId is passed, use it. If null, PeerJS generates one.
     if (customId) {
         peer = new Peer(customId);
     } else {
@@ -125,131 +149,102 @@ function initPeer(customId) {
         console.log('My Peer ID:', id);
 
         if (!isHost) {
-            // I am a Joiner, connect to Host
             connectToHost(hostId);
-        } else {
-            showToast('Meeting Created. Share ID: ' + id);
         }
     });
 
     peer.on('call', (call) => {
-        // Answer incoming calls automatically
-        console.log('Incoming call from:', call.peer);
         call.answer(myStream);
-
-        const videoEl = document.createElement('div'); // Placeholder, managed in addVideoStream
 
         call.on('stream', (userVideoStream) => {
             if (!peers[call.peer]) {
-                addVideoStream(userVideoStream, 'Peer ' + call.peer.substr(0, 4), false, call.peer);
-                peers[call.peer] = { call: call }; // Register call
+                addVideoStream(userVideoStream, 'Peer', false, call.peer);
+                peers[call.peer] = { call: call };
             }
         });
 
-        call.on('close', () => {
-            removeVideoStream(call.peer);
-        });
-
-        call.on('error', err => {
-            console.error('Call error:', err);
-            removeVideoStream(call.peer);
-        });
+        call.on('close', () => removeVideoStream(call.peer));
+        call.on('error', err => removeVideoStream(call.peer));
     });
 
     peer.on('connection', (conn) => {
-        // Data connection handling (for Mesh Coordination)
         handleDataConnection(conn);
     });
 
     peer.on('error', (err) => {
         console.error('Peer error:', err);
         if (err.type === 'unavailable-id') {
-            showToast('Meeting ID already taken. Try another.', 'error');
+            showToast('ID taken. Reloading...', 'error');
             setTimeout(() => location.reload(), 2000);
         } else if (err.type === 'peer-unavailable') {
-            showToast('Peer not found. Check ID or Host is offline.', 'error');
-        } else {
-            showToast('Connection Error: ' + err.type, 'error');
+            showToast('Waiting for Host...', 'warning');
+            // Optional retry logic could go here
         }
     });
 
     peer.on('disconnected', () => {
-        showToast('Disconnected from signaling server. Reconnecting...', 'warning');
+        showToast('Reconnecting...', 'warning');
         peer.reconnect();
     });
 }
 
 function connectToHost(destId) {
-    // 1. Open Data Connection to Host to announce presence
     const conn = peer.connect(destId);
-
     conn.on('open', () => {
-        // Send join request
         conn.send({ type: 'join-request', peerId: myPeerId });
     });
-
     conn.on('data', (data) => handleData(data));
-    conn.on('error', (err) => console.error("Conn error:", err));
 
-    // Also, normally the Host or other peers will CALL ME once they know I exist.
-    // Or, I can call the Host directly now.
     callPeer(destId);
 }
 
 function callPeer(destId) {
-    if (peers[destId]) return; // Already connected
+    if (peers[destId]) return;
 
-    const call = peer.call(destId, myStream);
+    // Add slight delay to avoid race conditions in mesh
+    setTimeout(() => {
+        const call = peer.call(destId, myStream);
 
-    call.on('stream', (userVideoStream) => {
-        if (!peers[destId]) { // Double check
-            addVideoStream(userVideoStream, 'Peer ' + destId.substr(0, 4), false, destId);
-            peers[destId] = { call: call };
-        }
-    });
+        call.on('stream', (userVideoStream) => {
+            if (!peers[destId]) {
+                addVideoStream(userVideoStream, 'Peer', false, destId);
+                peers[destId] = { call: call };
+            }
+        });
 
-    call.on('close', () => {
-        removeVideoStream(destId);
-    });
+        call.on('close', () => removeVideoStream(destId));
+    }, 500);
 }
 
-// --- Mesh Logic (Data connections) ---
+// --- Mesh Logic ---
 
 function handleDataConnection(conn) {
     conn.on('data', (data) => {
-        // Host Logic: When someone joins, tell everyone else
         if (isHost && data.type === 'join-request') {
             const newJoinerId = data.peerId;
-
-            // 1. Tell new user about existing peers
             const existingPeers = Object.keys(peers);
-            conn.send({ type: 'peer-list', peers: existingPeers }); // Send list to new guy
+            conn.send({ type: 'peer-list', peers: existingPeers });
 
-            // 2. Tell existing peers about new user
             Object.values(peers).forEach(p => {
                 if (p.conn) p.conn.send({ type: 'user-joined', peerId: newJoinerId });
             });
 
-            // 3. Save connection for future broadcasts
             if (!peers[newJoinerId]) peers[newJoinerId] = {};
             peers[newJoinerId].conn = conn;
         }
         else {
-            handleData(data); // Normal handling
+            handleData(data);
         }
     });
 }
 
 function handleData(data) {
-    // Joiner Logic
     if (data.type === 'peer-list') {
-        // Connect to everyone in the list
         data.peers.forEach(pid => {
             if (pid !== myPeerId) callPeer(pid);
         });
     }
     else if (data.type === 'user-joined') {
-        // Someone new joined the mesh, call them!
         callPeer(data.peerId);
     }
 }
@@ -258,7 +253,7 @@ function handleData(data) {
 // --- UI Functions ---
 
 function addVideoStream(stream, name, isLocal, peerId) {
-    if (peerId && document.getElementById('video-' + peerId)) return; // Already exists
+    if (peerId && document.getElementById('video-' + peerId)) return;
 
     const clone = videoTemplate.content.cloneNode(true);
     const tile = clone.querySelector('.video-tile');
@@ -270,37 +265,26 @@ function addVideoStream(stream, name, isLocal, peerId) {
 
     if (isLocal) {
         tile.classList.add('is-local');
-        video.muted = true; // Mute local video to prevent feedback/echo
+        video.muted = true;
     } else {
         tile.id = 'video-' + peerId;
     }
 
-    video.addEventListener('loadedmetadata', () => {
-        video.play();
-    });
-
+    video.onloadedmetadata = () => video.play();
     videoGrid.appendChild(tile);
-    recalcGrid();
 }
 
 function removeVideoStream(peerId) {
     const tile = document.getElementById('video-' + peerId);
     if (tile) tile.remove();
     if (peers[peerId]) delete peers[peerId];
-    recalcGrid();
-    showToast('Peer disconnected');
-}
-
-function recalcGrid() {
-    // Handled by CSS Grid usually, but we can adjust if needed
-    // meeting.css uses grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
 function generateId() {
-    return 'Room-' + Math.floor(Math.random() * 10000);
+    return 'Room-' + Math.floor(Math.random() * 9000 + 1000);
 }
 
-// --- Media Control Handlers ---
+// --- Media Controls ---
 
 function toggleAudio() {
     const audioTrack = myStream.getAudioTracks()[0];
@@ -325,49 +309,33 @@ function toggleVideo() {
 }
 
 async function toggleScreenShare() {
-    // If already sharing screen, switch back to cam
     if (myScreenStream) {
         stopScreenShare();
         return;
     }
-
     try {
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
         myScreenStream = stream;
-
         const videoTrack = myScreenStream.getVideoTracks()[0];
-
-        // Listen for user clicking "Stop Sharing" on system UI
         videoTrack.onended = () => stopScreenShare();
 
-        // Local Preview
-        const localVideoTile = document.querySelector('.video-tile.is-local video');
-        if (localVideoTile) localVideoTile.srcObject = myScreenStream;
+        const localVideo = document.querySelector('.video-tile.is-local video');
+        if (localVideo) localVideo.srcObject = myScreenStream;
 
-        // Replace track for all peers
         replaceTrackForPeers(videoTrack);
-
         btnScreen.classList.add('active');
-
-    } catch (err) {
-        console.error("Screen share cancel/error", err);
-    }
+    } catch (err) { console.error(err); }
 }
 
 function stopScreenShare() {
     if (!myScreenStream) return;
-
-    // Stop screen tracks
-    myScreenStream.getTracks().forEach(track => track.stop());
+    myScreenStream.getTracks().forEach(t => t.stop());
     myScreenStream = null;
 
-    // Switch back to camera
-    const webcamTrack = myStream.getVideoTracks()[0];
-    const localVideoTile = document.querySelector('.video-tile.is-local video');
-    if (localVideoTile) localVideoTile.srcObject = myStream;
+    const localVideo = document.querySelector('.video-tile.is-local video');
+    if (localVideo) localVideo.srcObject = myStream;
 
-    replaceTrackForPeers(webcamTrack);
-
+    replaceTrackForPeers(myStream.getVideoTracks()[0]);
     btnScreen.classList.remove('active');
 }
 
@@ -375,9 +343,7 @@ function replaceTrackForPeers(newVideoTrack) {
     Object.values(peers).forEach(p => {
         if (p.call && p.call.peerConnection) {
             const sender = p.call.peerConnection.getSenders().find(s => s.track.kind === 'video');
-            if (sender) {
-                sender.replaceTrack(newVideoTrack);
-            }
+            if (sender) sender.replaceTrack(newVideoTrack);
         }
     });
 }
@@ -391,9 +357,9 @@ function startTimer() {
     let seconds = 0;
     setInterval(() => {
         seconds++;
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        meetingTimer.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        meetingTimer.innerText = `${mins}:${secs}`;
     }, 1000);
 }
 
@@ -402,28 +368,21 @@ function showToast(msg, type = 'info') {
     toast.className = 'toast';
     toast.innerText = msg;
     if (type === 'error') toast.style.borderLeftColor = '#ff2a6d';
+    if (type === 'warning') toast.style.borderLeftColor = '#f39c12';
 
     toastContainer.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
 }
 
-// Copy Invite Link
+// Copy Link Logic
 displayMeetingId.addEventListener('click', () => {
     const id = displayMeetingId.innerText;
-    const protocol = location.protocol;
-    const host = location.host;
-    const path = location.pathname.replace('index.html', ''); // Clean path
-
-    // Construct simplified URL
-    const url = `${protocol}//${host}${path}?room=${id}`;
+    const url = `${location.protocol}//${location.host}${location.pathname.replace('index.html', '')}?room=${id}`;
 
     navigator.clipboard.writeText(url).then(() => {
-        showToast('Invite Link Copied! Share this URL.');
+        showToast('Invite Link Copied!');
     }).catch(() => {
-        // Fallback if clipboard fails (rare)
         navigator.clipboard.writeText(id);
-        showToast('Meeting ID Copied (Link copy failed)');
+        showToast('ID Copied: ' + id);
     });
 });
-
-function helperTextOrVal(txt) { return txt; }
